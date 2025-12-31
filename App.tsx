@@ -7,31 +7,20 @@ import Confetti from './components/Confetti';
 import Frame from './components/Frame';
 
 /**
- * Stable Video Player component defined outside of App 
- * to prevent DOM recreation/flickering on every render.
+ * Stable Video Player component.
+ * Simplified to rely on native browser controls to prevent 'locked' progress bars and volume sliders.
  */
 const VideoPlayer: React.FC<{ src: string, className?: string, autoPlay?: boolean }> = ({ src, className, autoPlay }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  
   return (
     <video 
-      ref={videoRef}
       src={src} 
-      className={`${className} cursor-pointer`} 
+      className={`${className} shadow-inner bg-black`} 
       controls 
       playsInline 
-      preload="metadata"
+      preload="auto"
       autoPlay={autoPlay}
-      muted={autoPlay} // Browsers often block autoplay unless muted
-      onClick={(e) => {
-        e.stopPropagation(); // Prevent gallery click-through
-        const v = e.currentTarget;
-        if (v.paused) {
-          v.play().catch(err => console.debug("Autoplay blocked:", err));
-        } else {
-          v.pause();
-        }
-      }}
+      // Audio is enabled. Native controls will allow user to adjust volume.
+      muted={false} 
     />
   );
 };
@@ -46,7 +35,12 @@ const App: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
   const [showAdmin, setShowAdmin] = useState(false);
   const [celebrationActive, setCelebrationActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   
+  // Audio refs
+  const bgMusicRef = useRef<HTMLAudioElement>(null);
+  const celebrationSfxRef = useRef<HTMLAudioElement>(null);
+
   // MCQ state
   const [currentMcqIdx, setCurrentMcqIdx] = useState(0);
   const [mcqPhase, setMcqPhase] = useState<'question' | 'feedback' | 'animation'>('question');
@@ -69,7 +63,7 @@ const App: React.FC = () => {
       if (diff <= 0) {
         clearInterval(interval);
         if (phase === AppPhase.COUNTDOWN) {
-          setCelebrationActive(true);
+          handleTriggerCelebration();
         }
       } else {
         setTimeLeft({
@@ -82,6 +76,29 @@ const App: React.FC = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [config.celebrationDate, phase]);
+
+  const handleTriggerCelebration = () => {
+    setCelebrationActive(true);
+    if (celebrationSfxRef.current && config.celebrationSfxUrl) {
+      celebrationSfxRef.current.volume = 0.8;
+      celebrationSfxRef.current.play().catch(e => console.debug("SFX blocked", e));
+    }
+  };
+
+  const startAtmosphere = () => {
+    if (bgMusicRef.current && config.backgroundMusicUrl) {
+      bgMusicRef.current.volume = isMuted ? 0 : 0.4;
+      bgMusicRef.current.play().catch(e => console.debug("Music blocked until further interaction", e));
+    }
+  };
+
+  const toggleMute = () => {
+    const newMute = !isMuted;
+    setIsMuted(newMute);
+    if (bgMusicRef.current) {
+      bgMusicRef.current.volume = newMute ? 0 : 0.4;
+    }
+  };
 
   const handleAdminSave = (newConfig: SiteConfig) => {
     setConfig(newConfig);
@@ -112,6 +129,7 @@ const App: React.FC = () => {
     const phases = Object.values(AppPhase);
     const currIdx = phases.indexOf(phase);
     if (currIdx < phases.length - 1) setPhase(phases[currIdx + 1]);
+    startAtmosphere();
   };
 
   const prevPhase = () => {
@@ -126,10 +144,23 @@ const App: React.FC = () => {
     <div className="relative h-screen w-screen bg-[#FFF9F9] overflow-hidden flex flex-col text-[#5D4037]">
       <div className="absolute inset-0 bg-floral pointer-events-none opacity-20" />
       <Confetti active={isShowerActive} />
+      
+      {/* Global Audio Elements */}
+      <audio ref={bgMusicRef} src={config.backgroundMusicUrl} loop />
+      <audio ref={celebrationSfxRef} src={config.celebrationSfxUrl} />
 
       {/* Admin Toggle */}
-      <button onClick={() => setShowAdmin(true)} className="fixed bottom-6 right-6 z-[60] w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
+      <button onClick={() => setShowAdmin(true)} className="fixed bottom-24 right-6 z-[60] w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+      </button>
+
+      {/* Music Toggle */}
+      <button onClick={toggleMute} className="fixed bottom-36 right-6 z-[60] w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
+        {isMuted ? (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+        )}
       </button>
 
       <main className="flex-1 relative z-10 overflow-hidden">
@@ -146,7 +177,12 @@ const App: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <button onClick={() => { setCelebrationActive(true); setPhase(AppPhase.CELEBRATION); }} className="mt-16 px-10 py-3 bg-white border border-pink-100 text-pink-300 rounded-full text-[9px] uppercase tracking-widest font-black shadow-sm">Relive Us</button>
+              <button 
+                onClick={() => { handleTriggerCelebration(); setPhase(AppPhase.CELEBRATION); startAtmosphere(); }} 
+                className="mt-16 px-10 py-3 bg-white border border-pink-100 text-pink-300 rounded-full text-[9px] uppercase tracking-widest font-black shadow-sm"
+              >
+                Relive Us
+              </button>
             </div>
           )}
 
@@ -205,7 +241,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="text-center italic serif text-2xl text-pink-300">Start your story in the moments tab. <br/> <button onClick={nextPhase} className="mt-4 underline">Next Section</button></div>
+                <div className="text-center italic serif text-2xl text-pink-300">Start your story in the Curator. <br/> <button onClick={nextPhase} className="mt-4 underline">Next Section</button></div>
               )}
             </div>
           )}
@@ -230,7 +266,7 @@ const App: React.FC = () => {
                        {getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx]?.resourceType === 'image' ? (
                          <img src={getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx].url} className="w-full max-h-[55vh] object-contain" alt="MCQ Result" />
                        ) : (
-                         <VideoPlayer src={getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx]?.url} className="w-full max-h-[55vh] bg-black" />
+                         <VideoPlayer src={getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx]?.url} className="w-full max-h-[55vh]" />
                        )}
                     </Frame>
                     <div className="flex gap-6">
@@ -276,7 +312,7 @@ const App: React.FC = () => {
                        {getSessionMedia()[currentSlideIdx].resourceType === 'image' ? (
                          <img src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh] object-contain" alt="Slide" />
                        ) : (
-                         <VideoPlayer key={getSessionMedia()[currentSlideIdx].id} src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh] bg-black" />
+                         <VideoPlayer key={getSessionMedia()[currentSlideIdx].id} src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh]" />
                        )}
                      </Frame>
                      {getSessionMedia()[currentSlideIdx].quote && (
@@ -284,7 +320,7 @@ const App: React.FC = () => {
                      )}
                    </>
                  ) : (
-                    <div className="text-pink-200 serif text-lg italic py-20 text-center">Your media session is empty. <br/> Add memories in the Curator.</div>
+                    <div className="text-pink-200 serif text-lg italic py-20 text-center">Your media session is empty.</div>
                  )}
                  <div className="flex gap-6 mt-2 mb-6">
                    <button 
@@ -342,7 +378,6 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Fixed Gallery Phase */}
           {phase === AppPhase.GALLERY && (
             <div className="w-full h-full max-w-7xl mx-auto flex flex-col p-4 md:p-8 animate-in slide-in-from-bottom duration-700">
                <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-10 border-b border-pink-100 pb-6 gap-4">
@@ -370,7 +405,7 @@ const App: React.FC = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                               </div>
                            </div>
-                           <video src={`${m.url}#t=0.1`} className="w-full h-full object-cover opacity-70" />
+                           <video src={`${m.url}#t=0.1`} className="w-full h-full object-cover opacity-70" muted />
                          </div>
                        )}
                      </div>
@@ -395,7 +430,7 @@ const App: React.FC = () => {
                   {selectedGalleryMedia.resourceType === 'image' ? (
                     <img src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] object-contain" alt="Selected memory" />
                   ) : (
-                    <VideoPlayer key={selectedGalleryMedia.id} src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] bg-black shadow-inner" autoPlay />
+                    <VideoPlayer key={selectedGalleryMedia.id} src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh]" autoPlay />
                   )}
                 </Frame>
              </div>
@@ -417,7 +452,7 @@ const App: React.FC = () => {
         </div>
         
         <button 
-          onClick={() => setPhase(AppPhase.GALLERY)}
+          onClick={() => { setPhase(AppPhase.GALLERY); startAtmosphere(); }}
           className="group flex flex-col items-center gap-1 -mt-4 transition-all hover:scale-110 active:scale-95"
         >
           <div className="text-pink-200 text-2xl transition-colors group-hover:text-pink-500 animate-bounce">❀</div>

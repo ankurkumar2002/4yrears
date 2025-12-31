@@ -10,7 +10,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'settings' | 'moments' | 'mcq' | 'session'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'moments' | 'mcq' | 'session' | 'audio'>('settings');
   const [localConfig, setLocalConfig] = useState<SiteConfig>(config);
 
   const handleCloudinaryUpload = (type: MediaAsset['type'], linkedToId?: string) => {
@@ -80,13 +80,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
         </div>
 
         <div className="flex border-b border-pink-100 bg-pink-50/20 overflow-x-auto">
-          {(['settings', 'moments', 'mcq', 'session'] as const).map(tab => (
+          {(['settings', 'moments', 'mcq', 'session', 'audio'] as const).map(tab => (
             <button 
               key={tab} 
               onClick={() => setActiveTab(tab)}
               className={`px-8 py-4 text-xs uppercase tracking-widest transition-all font-medium whitespace-nowrap ${activeTab === tab ? 'text-[#FF69B4] border-b-2 border-[#FF69B4] bg-white' : 'text-pink-300 hover:text-pink-500'}`}
             >
-              {tab === 'mcq' ? 'Memory Games' : tab === 'session' ? 'Media Session' : tab}
+              {tab === 'mcq' ? 'Games' : tab === 'session' ? 'Media' : tab}
             </button>
           ))}
         </div>
@@ -95,7 +95,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
           {activeTab === 'settings' && (
             <div className="max-w-3xl space-y-10">
               <div className="bg-pink-50/50 p-6 rounded-2xl border border-pink-100">
-                <h4 className="text-xs font-black uppercase tracking-widest text-pink-400 mb-4">Cloudinary Config</h4>
+                <h4 className="text-xs font-black uppercase tracking-widest text-pink-400 mb-4">Cloudinary Configuration</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-1">Cloud Name</label>
@@ -103,36 +103,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
                   </div>
                   <div>
                     <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-1">Upload Preset (Unsigned)</label>
-                    <input className="w-full bg-white border border-pink-100 p-3 rounded-lg" value={localConfig.cloudinaryUploadPreset} onChange={(e) => setLocalConfig({...localConfig, cloudinaryUploadPreset: e.target.value})}/>
-                    <p className="text-[9px] text-pink-300 mt-1 italic">* Ensure this preset is 'Unsigned' in your Cloudinary Settings.</p>
+                    <input className="w-full bg-white border border-pink-100 p-3 rounded-lg font-mono text-xs" value={localConfig.cloudinaryUploadPreset} placeholder="e.g. ml_default" onChange={(e) => setLocalConfig({...localConfig, cloudinaryUploadPreset: e.target.value})}/>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Celebration Date & Time (UTC)</label>
+                <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Anniversary / Midnight Time (UTC)</label>
                 <input type="datetime-local" className="w-full bg-white border border-pink-100 p-3 rounded-lg" value={localConfig.celebrationDate.slice(0, 16)} onChange={(e) => setLocalConfig({...localConfig, celebrationDate: new Date(e.target.value).toISOString()})}/>
-              </div>
-
-              <div className="space-y-4">
-                <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Pause Message</label>
-                <textarea className="w-full bg-pink-50/30 border border-pink-100 p-4 rounded-xl text-sm italic h-20" value={localConfig.pauseMessage} onChange={(e) => setLocalConfig({...localConfig, pauseMessage: e.target.value})}/>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Section Heading</label>
-                  <input className="w-full bg-pink-50/30 border border-pink-100 p-4 rounded-xl text-sm italic h-12" value={localConfig.partnerPrompt} onChange={(e) => setLocalConfig({...localConfig, partnerPrompt: e.target.value})}/>
-                </div>
-                <div className="space-y-4">
-                  <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Static Share Content</label>
-                  <textarea className="w-full bg-pink-50/30 border border-pink-100 p-4 rounded-xl text-sm italic h-24" value={localConfig.partnerStaticMessage} onChange={(e) => setLocalConfig({...localConfig, partnerStaticMessage: e.target.value})}/>
-                </div>
               </div>
 
               <div className="space-y-4">
                 <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Closing Reflection</label>
                 <textarea className="w-full bg-pink-50/30 border border-pink-100 p-4 rounded-xl text-sm italic h-24" value={localConfig.closingMessage} onChange={(e) => setLocalConfig({...localConfig, closingMessage: e.target.value})}/>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'audio' && (
+            <div className="max-w-3xl space-y-8 animate-in fade-in duration-500">
+              <h3 className="text-2xl serif italic text-pink-600">The Sound of Us</h3>
+              <p className="text-xs text-pink-400">Paste direct MP3/WAV links here for the atmosphere. (Requires a link that ends in .mp3)</p>
+              
+              <div className="space-y-6 bg-pink-50/30 p-8 rounded-2xl border border-pink-100">
+                <div>
+                  <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-2">Background Music Loop</label>
+                  <input 
+                    className="w-full bg-white border border-pink-100 p-4 rounded-xl text-sm italic" 
+                    placeholder="https://example.com/song.mp3"
+                    value={localConfig.backgroundMusicUrl || ''} 
+                    onChange={(e) => setLocalConfig({...localConfig, backgroundMusicUrl: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-2">Midnight Celebration Sound Effect</label>
+                  <input 
+                    className="w-full bg-white border border-pink-100 p-4 rounded-xl text-sm italic" 
+                    placeholder="https://example.com/popper.mp3"
+                    value={localConfig.celebrationSfxUrl || ''} 
+                    onChange={(e) => setLocalConfig({...localConfig, celebrationSfxUrl: e.target.value})}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -204,7 +215,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
                       ))}
                     </div>
                     <div className="pt-4 border-t border-pink-100/50">
-                      <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-2">Revelatory Media (Unlocked after correct answer)</label>
+                      <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-2">Media for this Game</label>
                       <div className="flex gap-4 flex-wrap">
                         {getAssetsFor('mcq', mcq.id).map(a => (
                           <div key={a.id} className="w-24 h-24 bg-white border border-pink-100 rounded overflow-hidden group relative shadow-sm">
@@ -227,19 +238,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
                 <h3 className="text-2xl serif italic text-pink-600">The Media Session</h3>
                 <button onClick={() => handleCloudinaryUpload('session')} className="px-6 py-2 bg-pink-50 text-pink-500 border border-pink-200 rounded-full text-xs uppercase tracking-widest hover:bg-pink-100">Upload New</button>
               </div>
-              <p className="text-xs text-pink-300 italic">These memories appear in the main media session. Photos and videos will be mixed.</p>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {getAssetsFor('session').map(asset => (
                   <div key={asset.id} className="aspect-square bg-white border border-pink-100 rounded-xl relative group overflow-hidden shadow-sm">
                     {asset.resourceType === 'image' ? <img src={asset.url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-black flex items-center justify-center text-white text-[10px] font-black uppercase italic">Video</div>}
                     <div className="absolute inset-0 bg-pink-500/30 opacity-0 group-hover:opacity-100 flex items-center justify-center p-2 transition-opacity">
                        <button onClick={() => setLocalConfig({...localConfig, media: localConfig.media.filter(m => m.id !== asset.id)})} className="bg-white text-pink-500 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-lg">Delete</button>
-                    </div>
-                    <div className="absolute bottom-0 left-0 w-full p-2 bg-white/90">
-                      <input className="w-full text-[9px] italic bg-transparent outline-none focus:text-pink-600" placeholder="Add caption..." value={asset.quote || ''} onChange={(e) => {
-                        const updated = localConfig.media.map(m => m.id === asset.id ? { ...m, quote: e.target.value } : m);
-                        setLocalConfig({...localConfig, media: updated});
-                      }}/>
                     </div>
                   </div>
                 ))}

@@ -42,6 +42,8 @@ export interface SiteConfig {
   pauseMessage?: string;
   partnerPrompt?: string; 
   partnerStaticMessage?: string; 
+  backgroundMusicUrl?: string;
+  celebrationSfxUrl?: string;
   mcqs: MCQ[];
   media: MediaAsset[];
   moments: MomentData[];

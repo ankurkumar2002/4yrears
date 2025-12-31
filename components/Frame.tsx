@@ -16,8 +16,8 @@ const Frame: React.FC<FrameProps> = ({ children, className = '', caption }) => {
       <div className="relative p-3 bg-white border-2 border-pink-100 rounded-lg shadow-xl transition-transform duration-700 hover:scale-[1.01]">
         <div className="overflow-hidden rounded-md relative border border-pink-50">
           {children}
-          {/* Subtle warm overlay */}
-          <div className="absolute inset-0 bg-pink-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          {/* Subtle warm overlay - CRITICAL: pointer-events-none added to prevent blocking video controls */}
+          <div className="absolute inset-0 bg-pink-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         </div>
       </div>
       

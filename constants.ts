@@ -9,8 +9,7 @@ export const COLORS = {
   gold: '#D4AF37'
 };
 
-// Default celebration date set to New Year's 12:00 AM (assuming Jan 1, 2026 for a future target, or dynamic)
-// For demonstration, setting it to a near future date if not specifically provided.
+// Target: New Year 2026 12:00 AM
 export const TARGET_DATE = '2026-01-01T00:00:00Z';
 
 export const INITIAL_CONFIG: SiteConfig = {
@@ -21,7 +20,10 @@ export const INITIAL_CONFIG: SiteConfig = {
   partnerPrompt: "Our Shared Future",
   partnerStaticMessage: "As we screenshare and look back at these memories together, let's remember that the best chapters are yet to be written. Here's to us, to four years of growth, and to a lifetime of love.",
   cloudinaryCloudName: 'drtxmi9jm', 
-  cloudinaryUploadPreset: 'ml_default', // User must ensure an 'Unsigned' upload preset named 'ml_default' exists in Cloudinary dashboard
+  cloudinaryUploadPreset: 'ml_default',
+  // Dreamy, ambient track for the atmosphere
+  backgroundMusicUrl: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3',
+  celebrationSfxUrl: 'https://assets.mixkit.co/sfx/preview/mixkit-party-popper-celebration-02-2248.mp3',
   mcqs: [
     {
       id: 'mcq_1',
