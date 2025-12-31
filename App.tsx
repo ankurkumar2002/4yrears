@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [showAdmin, setShowAdmin] = useState(false);
   const [celebrationActive, setCelebrationActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(0.4);
   
   // Audio refs and states
   const bgMusicRef = useRef<HTMLAudioElement>(null);
@@ -77,6 +78,23 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [config.celebrationDate, phase]);
 
+  // Ensure music starts if page reloads and countdown is already past
+  useEffect(() => {
+    const target = new Date(config.celebrationDate).getTime();
+    const now = new Date().getTime();
+    if (now >= target && phase !== AppPhase.COUNTDOWN) {
+      setCelebrationActive(true);
+      startAtmosphere();
+    }
+  }, []);
+
+  // Sync volume state with audio element
+  useEffect(() => {
+    if (bgMusicRef.current) {
+      bgMusicRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
+
   // Ensure song index is valid when playlist changes
   useEffect(() => {
     if (currentSongIndex >= (config.backgroundMusicUrls?.length || 0)) {
@@ -90,11 +108,22 @@ const App: React.FC = () => {
       celebrationSfxRef.current.volume = 0.8;
       celebrationSfxRef.current.play().catch(e => console.debug("SFX blocked", e));
     }
+    // Only switch to celebration phase if we were in countdown
+    if (phase === AppPhase.COUNTDOWN) {
+      setPhase(AppPhase.CELEBRATION);
+    }
+    // Start music playlist automatically at midnight
+    startAtmosphere();
   };
 
   const startAtmosphere = () => {
+    // guidline check: only play if past countdown
+    const target = new Date(config.celebrationDate).getTime();
+    const now = new Date().getTime();
+    if (now < target) return; 
+
     if (bgMusicRef.current && config.backgroundMusicUrls && config.backgroundMusicUrls.length > 0) {
-      bgMusicRef.current.volume = isMuted ? 0 : 0.4;
+      bgMusicRef.current.volume = isMuted ? 0 : volume;
       bgMusicRef.current.play().catch(e => console.debug("Music blocked until further interaction", e));
     }
   };
@@ -110,15 +139,18 @@ const App: React.FC = () => {
           bgMusicRef.current.play().catch(e => console.debug("Next song autoplay blocked", e));
         }
       }, 100);
+    } else if (urls.length === 1) {
+      // Loop the single song
+      if (bgMusicRef.current) {
+        bgMusicRef.current.currentTime = 0;
+        bgMusicRef.current.play();
+      }
     }
   };
 
   const toggleMute = () => {
     const newMute = !isMuted;
     setIsMuted(newMute);
-    if (bgMusicRef.current) {
-      bgMusicRef.current.volume = newMute ? 0 : 0.4;
-    }
   };
 
   const handleAdminSave = (newConfig: SiteConfig) => {
@@ -179,14 +211,33 @@ const App: React.FC = () => {
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
       </button>
 
-      {/* Music Toggle */}
-      <button onClick={toggleMute} className="fixed bottom-36 right-6 z-[60] w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
-        {isMuted ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-        )}
-      </button>
+      {/* Floating Controls Area (Only if past countdown) */}
+      {celebrationActive && (
+        <div className="fixed bottom-36 right-6 z-[60] flex flex-col items-center gap-4">
+           {/* Volume Slider - Vertical style when hovered or always on mobile? Let's go simple horizontal tooltip-like */}
+           <div className="group relative flex flex-col items-center">
+             <div className="absolute bottom-full mb-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-pink-100 shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 pointer-events-none group-hover:pointer-events-auto">
+               <input 
+                 type="range" 
+                 min="0" 
+                 max="1" 
+                 step="0.01" 
+                 value={volume} 
+                 onChange={(e) => setVolume(parseFloat(e.target.value))}
+                 className="w-32 h-1 bg-pink-100 rounded-lg appearance-none cursor-pointer accent-pink-500"
+               />
+               <p className="text-[8px] uppercase tracking-widest text-pink-300 font-bold mt-2 text-center">Volume</p>
+             </div>
+             <button onClick={toggleMute} className="w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
+                {isMuted || volume === 0 ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                )}
+             </button>
+           </div>
+        </div>
+      )}
 
       <main className="flex-1 relative z-10 overflow-hidden">
         <div className="h-full w-full flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto overflow-x-hidden">
@@ -203,7 +254,7 @@ const App: React.FC = () => {
                 ))}
               </div>
               <button 
-                onClick={() => { handleTriggerCelebration(); setPhase(AppPhase.CELEBRATION); startAtmosphere(); }} 
+                onClick={() => { handleTriggerCelebration(); startAtmosphere(); }} 
                 className="mt-16 px-10 py-3 bg-white border border-pink-100 text-pink-300 rounded-full text-[9px] uppercase tracking-widest font-black shadow-sm"
               >
                 Relive Us

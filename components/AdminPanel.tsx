@@ -41,6 +41,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
     );
   };
 
+  const handleAudioUpload = () => {
+    if (!localConfig.cloudinaryCloudName) {
+      alert("Please enter your Cloudinary Cloud Name in Settings first.");
+      return;
+    }
+
+    cloudinaryService.openWidget(
+      localConfig.cloudinaryCloudName,
+      localConfig.cloudinaryUploadPreset || 'ml_default',
+      (info: any) => {
+        // Cloudinary returns secure_url for the uploaded audio file
+        const urls = [...(localConfig.backgroundMusicUrls || [])];
+        urls.push(info.secure_url);
+        setLocalConfig({ ...localConfig, backgroundMusicUrls: urls });
+      }
+    );
+  };
+
   const addMoment = () => {
     const newMoment: MomentData = { id: Date.now().toString(), description: "Share a beautiful thought here..." };
     setLocalConfig({...localConfig, moments: [...localConfig.moments, newMoment]});
@@ -143,17 +161,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl space-y-2">
                 <p className="text-[10px] font-black uppercase text-amber-600 tracking-wider">⚠️ Important Note on URLs</p>
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  The link must be a <strong>direct file link</strong> (ending in .mp3 or .wav). Landing pages (like audio.com/my-song) will not work. 
+                  The link must be a <strong>direct file link</strong> (ending in .mp3 or .wav). 
                   <br/><br/>
-                  <strong>How to get a direct link:</strong> Go to a royalty-free site like Pixabay.com or Mixkit.co, find a song, and right-click the "Download" button to select "Copy Link Address". The link should look like <i>https://.../music.mp3</i>
+                  <strong>Good news:</strong> You can now <strong>upload your own songs</strong> directly! Just click the "Upload Song" button below.
                 </p>
               </div>
               
               <div className="space-y-6 bg-pink-50/30 p-8 rounded-2xl border border-pink-100">
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Background Playlist (Direct .mp3 Links)</label>
-                    <button onClick={addSongUrl} className="text-[10px] bg-pink-100 text-pink-500 px-3 py-1 rounded-full hover:bg-pink-200 uppercase font-black tracking-widest">+ Add Song</button>
+                    <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Background Playlist</label>
+                    <div className="flex gap-2">
+                      <button onClick={handleAudioUpload} className="text-[10px] bg-pink-500 text-white px-4 py-1 rounded-full hover:bg-pink-600 uppercase font-black tracking-widest shadow-sm transition-all">↑ Upload Song</button>
+                      <button onClick={addSongUrl} className="text-[10px] bg-pink-100 text-pink-500 px-3 py-1 rounded-full hover:bg-pink-200 uppercase font-black tracking-widest">+ Add URL</button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     {(localConfig.backgroundMusicUrls || []).map((url, idx) => (
@@ -170,7 +191,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
                       </div>
                     ))}
                     {(localConfig.backgroundMusicUrls || []).length === 0 && (
-                      <p className="text-xs text-pink-300 italic">No songs added. Click "Add Song" to start your playlist.</p>
+                      <p className="text-xs text-pink-300 italic">No songs added. Upload your first song to start your playlist.</p>
                     )}
                   </div>
                 </div>

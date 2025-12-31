@@ -20,9 +20,10 @@ export const cloudinaryService = {
         uploadPreset: uploadPreset || 'ml_default',
         sources: ['local', 'url', 'camera'],
         multiple: true,
-        clientAllowedFormats: ['png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'webm'],
-        maxVideoFileSize: 1000000000, // Increased to 1GB (1,000,000,000 bytes)
-        resourceType: 'auto', // Important for handling videos correctly
+        // Added audio formats to allowed formats
+        clientAllowedFormats: ['png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'webm', 'mp3', 'wav', 'm4a', 'ogg'],
+        maxVideoFileSize: 1000000000, // 1GB
+        resourceType: 'auto', // Important: Cloudinary handles audio/video automatically
         styles: {
           palette: {
             window: '#FFFFFF',
