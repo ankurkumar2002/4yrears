@@ -1,30 +1,38 @@
-
 import { SiteConfig } from '../types';
 
 const SYNC_URL = '/.netlify/functions/sync';
 
 export const cloudSyncService = {
   /**
-   * Attempts to fetch the config from MongoDB.
-   * Throws an error if the connection fails.
+   * Fetches the config from MongoDB via the Netlify function.
+   * Returns null on any failure to trigger localStorage fallback.
    */
   async fetchConfig(): Promise<SiteConfig | null> {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
       const response = await fetch(`${SYNC_URL}?action=get`, {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
 
-      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+      if (!response.ok) {
+        console.warn(`Cloud fetch failed with status: ${response.status}`);
+        return null;
+      }
       
       const data = await response.json();
-      return data && data.adminPasswordHash ? data : null;
-    } catch (e) {
-      console.error("Cloud Fetch Failed:", e);
-      throw new Error("Unable to connect to MongoDB. Check your Netlify Function or MONGODB_URI.");
+      
+      // A valid config must have the password hash
+      if (data && data.adminPasswordHash) {
+        return data as SiteConfig;
+      }
+      
+      return null;
+    } catch (e: any) {
+      console.warn("CloudSyncService: Unable to reach database. Falling back to local.", e.message);
+      return null;
     }
   },
 
@@ -38,17 +46,25 @@ export const cloudSyncService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'save', config })
       });
-      return response.ok;
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.error("Cloud Save Failed:", err.error || response.statusText);
+        return false;
+      }
+
+      return true;
     } catch (e) {
-      console.error("Cloud Save Failed:", e);
+      console.error("CloudSyncService: Save error.", e);
       return false;
     }
   },
 
   /**
-   * Migration helper to push local data to cloud once.
+   * Migration helper to push local state to cloud.
    */
-  async migrate(config: SiteConfig): Promise<boolean> {
+  async migrateToCloud(config: SiteConfig): Promise<boolean> {
+    console.log("Migrating local data to MongoDB...");
     return this.saveConfig(config);
   }
 };
