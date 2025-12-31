@@ -1,0 +1,8 @@
+{
+  "name": "Elysian: A Four-Year Journey",
+  "description": "A sophisticated, admin-controlled anniversary platform designed for a 4-year milestone, featuring Google Drive integration, interactive MCQs, and elegant midnight animations.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
