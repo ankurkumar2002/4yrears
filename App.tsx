@@ -6,6 +6,36 @@ import AdminPanel from './components/AdminPanel';
 import Confetti from './components/Confetti';
 import Frame from './components/Frame';
 
+/**
+ * Stable Video Player component defined outside of App 
+ * to prevent DOM recreation/flickering on every render.
+ */
+const VideoPlayer: React.FC<{ src: string, className?: string, autoPlay?: boolean }> = ({ src, className, autoPlay }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  return (
+    <video 
+      ref={videoRef}
+      src={src} 
+      className={`${className} cursor-pointer`} 
+      controls 
+      playsInline 
+      preload="metadata"
+      autoPlay={autoPlay}
+      muted={autoPlay} // Browsers often block autoplay unless muted
+      onClick={(e) => {
+        e.stopPropagation(); // Prevent gallery click-through
+        const v = e.currentTarget;
+        if (v.paused) {
+          v.play().catch(err => console.debug("Autoplay blocked:", err));
+        } else {
+          v.pause();
+        }
+      }}
+    />
+  );
+};
+
 const App: React.FC = () => {
   const [config, setConfig] = useState<SiteConfig>(() => {
     const saved = localStorage.getItem('anniversary_config');
@@ -91,25 +121,6 @@ const App: React.FC = () => {
   };
 
   const isShowerActive = celebrationActive && [AppPhase.COUNTDOWN, AppPhase.CELEBRATION, AppPhase.MOMENTS].includes(phase);
-
-  // Helper to render video with proper attributes
-  const VideoPlayer = ({ src, className }: { src: string, className?: string }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    return (
-      <video 
-        ref={videoRef}
-        src={src} 
-        className={className} 
-        controls 
-        playsInline 
-        preload="auto"
-        onClick={(e) => {
-          const v = e.currentTarget;
-          v.paused ? v.play() : v.pause();
-        }}
-      />
-    );
-  };
 
   return (
     <div className="relative h-screen w-screen bg-[#FFF9F9] overflow-hidden flex flex-col text-[#5D4037]">
@@ -265,7 +276,7 @@ const App: React.FC = () => {
                        {getSessionMedia()[currentSlideIdx].resourceType === 'image' ? (
                          <img src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh] object-contain" alt="Slide" />
                        ) : (
-                         <VideoPlayer src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh] bg-black" />
+                         <VideoPlayer key={getSessionMedia()[currentSlideIdx].id} src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh] bg-black" />
                        )}
                      </Frame>
                      {getSessionMedia()[currentSlideIdx].quote && (
@@ -331,34 +342,40 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Full-Screen Gallery Phase */}
+          {/* Fixed Gallery Phase */}
           {phase === AppPhase.GALLERY && (
-            <div className="w-full h-full max-w-6xl mx-auto flex flex-col p-6 animate-in slide-in-from-bottom duration-700">
-               <div className="flex justify-between items-end mb-10 border-b border-pink-100 pb-6">
-                 <div>
+            <div className="w-full h-full max-w-7xl mx-auto flex flex-col p-4 md:p-8 animate-in slide-in-from-bottom duration-700">
+               <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-10 border-b border-pink-100 pb-6 gap-4">
+                 <div className="text-center md:text-left">
                    <span className="text-[10px] uppercase tracking-[0.5em] text-pink-300 font-bold">The Archive</span>
-                   <h2 className="text-5xl serif italic text-pink-600">Our Shared Media</h2>
+                   <h2 className="text-4xl md:text-6xl serif italic text-pink-600">Our Shared Media</h2>
                  </div>
-                 <button onClick={() => setPhase(AppPhase.CELEBRATION)} className="text-[10px] uppercase tracking-widest font-black text-pink-400 border border-pink-100 px-6 py-2 rounded-full">Close Archive</button>
+                 <button onClick={() => setPhase(AppPhase.CELEBRATION)} className="text-[10px] uppercase tracking-widest font-black text-pink-500 border border-pink-200 px-8 py-3 rounded-full bg-white hover:bg-pink-50 transition-all shadow-sm">Close Archive</button>
                </div>
                
-               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-20 overflow-y-auto pr-2 custom-scrollbar">
-                 {config.media.map((m) => (
-                   <div 
-                    key={m.id} 
-                    onClick={() => setSelectedGalleryMedia(m)}
-                    className="aspect-square bg-white border border-pink-100 rounded-xl overflow-hidden cursor-zoom-in group shadow-sm hover:shadow-md transition-all"
-                   >
-                     {m.resourceType === 'image' ? (
-                       <img src={m.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Memory" />
-                     ) : (
-                       <div className="w-full h-full bg-black relative flex items-center justify-center">
-                         <div className="text-white text-[10px] font-black uppercase tracking-widest z-10">Video</div>
-                         <VideoPlayer src={m.url} className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                       </div>
-                     )}
-                   </div>
-                 ))}
+               <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 pb-20">
+                   {config.media.map((m) => (
+                     <div 
+                      key={m.id} 
+                      onClick={() => setSelectedGalleryMedia(m)}
+                      className="relative aspect-square bg-white border border-pink-100 rounded-lg overflow-hidden cursor-zoom-in group shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300"
+                     >
+                       {m.resourceType === 'image' ? (
+                         <img src={m.url} className="w-full h-full object-cover" alt="Memory" loading="lazy" />
+                       ) : (
+                         <div className="w-full h-full bg-black relative flex items-center justify-center">
+                           <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              </div>
+                           </div>
+                           <video src={`${m.url}#t=0.1`} className="w-full h-full object-cover opacity-70" />
+                         </div>
+                       )}
+                     </div>
+                   ))}
+                 </div>
                </div>
             </div>
           )}
@@ -368,45 +385,48 @@ const App: React.FC = () => {
 
       {/* Media Lightbox/Modal */}
       {selectedGalleryMedia && (
-        <div className="fixed inset-0 z-[100] bg-[#FFF9F9]/95 flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-           <button onClick={() => setSelectedGalleryMedia(null)} className="absolute top-8 right-8 text-pink-300 hover:text-pink-500 transition-all">
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="fixed inset-0 z-[100] bg-[#FFF9F9]/98 flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+           <button onClick={() => setSelectedGalleryMedia(null)} className="absolute top-6 right-6 md:top-10 md:right-10 text-pink-300 hover:text-pink-500 transition-all z-[110]">
+             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 md:h-12 md:w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
            </button>
-           <Frame className="max-w-4xl w-full max-h-[80vh] flex items-center justify-center">
-             {selectedGalleryMedia.resourceType === 'image' ? (
-               <img src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] object-contain" alt="Selected memory" />
-             ) : (
-               <VideoPlayer src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] bg-black" />
+           <div className="max-w-5xl w-full h-full flex flex-col items-center justify-center gap-6">
+             <div className="relative w-full flex-1 flex items-center justify-center">
+                <Frame className="w-full max-h-[75vh] flex items-center justify-center overflow-hidden">
+                  {selectedGalleryMedia.resourceType === 'image' ? (
+                    <img src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] object-contain" alt="Selected memory" />
+                  ) : (
+                    <VideoPlayer key={selectedGalleryMedia.id} src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] bg-black shadow-inner" autoPlay />
+                  )}
+                </Frame>
+             </div>
+             {selectedGalleryMedia.quote && (
+               <p className="text-xl md:text-3xl serif italic text-[#5D4037] text-center max-w-3xl px-6 py-4 animate-in slide-in-from-bottom duration-500 bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm">
+                 "{selectedGalleryMedia.quote}"
+               </p>
              )}
-           </Frame>
-           {selectedGalleryMedia.quote && (
-             <p className="mt-8 text-2xl serif italic text-[#5D4037] text-center max-w-2xl px-4 animate-in slide-in-from-bottom duration-500">
-               "{selectedGalleryMedia.quote}"
-             </p>
-           )}
+           </div>
         </div>
       )}
 
-      {/* Enhanced Bottom Navigation & Gallery Link */}
-      <div className="h-14 flex justify-between px-10 items-center z-40 bg-white/40 backdrop-blur-sm border-t border-pink-100">
-        <div className="flex gap-8">
+      {/* Bottom Navigation */}
+      <div className="h-16 flex justify-between px-6 md:px-12 items-center z-40 bg-white/60 backdrop-blur-md border-t border-pink-100">
+        <div className="flex w-32">
            {phase !== AppPhase.COUNTDOWN && phase !== AppPhase.CELEBRATION && (
-             <button onClick={prevPhase} className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300 hover:text-pink-500 transition-all">Previous</button>
+             <button onClick={prevPhase} className="text-[10px] font-black uppercase tracking-[0.3em] text-pink-300 hover:text-pink-500 transition-all">Previous</button>
            )}
         </div>
         
-        {/* THE REQUESTED GALLERY LINK */}
         <button 
           onClick={() => setPhase(AppPhase.GALLERY)}
-          className="group flex flex-col items-center gap-1 -mt-2 transition-all hover:scale-110"
+          className="group flex flex-col items-center gap-1 -mt-4 transition-all hover:scale-110 active:scale-95"
         >
-          <div className="text-pink-200 text-lg transition-colors group-hover:text-pink-400">❀</div>
-          <span className="text-[9px] font-black uppercase tracking-[0.4em] text-pink-300 group-hover:text-pink-500">The Archive</span>
+          <div className="text-pink-200 text-2xl transition-colors group-hover:text-pink-500 animate-bounce">❀</div>
+          <span className="text-[9px] font-black uppercase tracking-[0.4em] text-pink-300 group-hover:text-pink-600">The Archive</span>
         </button>
 
-        <div className="flex gap-8">
+        <div className="flex w-32 justify-end">
            {phase !== AppPhase.COUNTDOWN && phase !== AppPhase.CELEBRATION && phase !== AppPhase.GALLERY && (
-             <button onClick={nextPhase} className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300 hover:text-pink-500 transition-all">Next</button>
+             <button onClick={nextPhase} className="text-[10px] font-black uppercase tracking-[0.3em] text-pink-300 hover:text-pink-500 transition-all">Next</button>
            )}
         </div>
       </div>
@@ -414,10 +434,16 @@ const App: React.FC = () => {
       {showAdmin && <AdminPanel config={config} onSave={handleAdminSave} onClose={() => setShowAdmin(false)} />}
       
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 182, 193, 0.05); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #FFD1DC; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #FF69B4; }
+        
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-in-from-bottom { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-in { animation: var(--tw-duration, 500ms) ease-out both; }
+        .fade-in { animation-name: fade-in; }
+        .slide-in-from-bottom { animation-name: slide-in-from-bottom; }
       `}</style>
     </div>
   );
