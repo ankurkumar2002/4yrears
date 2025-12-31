@@ -6,6 +6,13 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# IMPORTANT: Exclude Netlify functions from SPA redirect
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
