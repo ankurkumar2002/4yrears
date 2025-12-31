@@ -68,6 +68,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
     return localConfig.media.filter(m => m.type === type && (id ? m.linkedToId === id : true));
   };
 
+  const addSongUrl = () => {
+    const urls = [...(localConfig.backgroundMusicUrls || [])];
+    urls.push("");
+    setLocalConfig({ ...localConfig, backgroundMusicUrls: urls });
+  };
+
+  const updateSongUrl = (idx: number, val: string) => {
+    const urls = [...(localConfig.backgroundMusicUrls || [])];
+    urls[idx] = val;
+    setLocalConfig({ ...localConfig, backgroundMusicUrls: urls });
+  };
+
+  const removeSongUrl = (idx: number) => {
+    const urls = (localConfig.backgroundMusicUrls || []).filter((_, i) => i !== idx);
+    setLocalConfig({ ...localConfig, backgroundMusicUrls: urls });
+  };
+
   return (
     <div className="fixed inset-0 bg-white/95 z-[100] p-4 flex flex-col items-center">
       <div className="max-w-6xl w-full flex-1 bg-white border border-pink-100 rounded-xl flex flex-col overflow-hidden shadow-2xl text-[#5D4037]">
@@ -123,17 +140,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ config, onSave, onClose }) => {
           {activeTab === 'audio' && (
             <div className="max-w-3xl space-y-8 animate-in fade-in duration-500">
               <h3 className="text-2xl serif italic text-pink-600">The Sound of Us</h3>
-              <p className="text-xs text-pink-400">Paste direct MP3/WAV links here for the atmosphere. (Requires a link that ends in .mp3)</p>
+              <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl space-y-2">
+                <p className="text-[10px] font-black uppercase text-amber-600 tracking-wider">⚠️ Important Note on URLs</p>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  The link must be a <strong>direct file link</strong> (ending in .mp3 or .wav). Landing pages (like audio.com/my-song) will not work. 
+                  <br/><br/>
+                  <strong>How to get a direct link:</strong> Go to a royalty-free site like Pixabay.com or Mixkit.co, find a song, and right-click the "Download" button to select "Copy Link Address". The link should look like <i>https://.../music.mp3</i>
+                </p>
+              </div>
               
               <div className="space-y-6 bg-pink-50/30 p-8 rounded-2xl border border-pink-100">
                 <div>
-                  <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-2">Background Music Loop</label>
-                  <input 
-                    className="w-full bg-white border border-pink-100 p-4 rounded-xl text-sm italic" 
-                    placeholder="https://example.com/song.mp3"
-                    value={localConfig.backgroundMusicUrl || ''} 
-                    onChange={(e) => setLocalConfig({...localConfig, backgroundMusicUrl: e.target.value})}
-                  />
+                  <div className="flex justify-between items-center mb-4">
+                    <label className="text-[10px] text-pink-400 uppercase tracking-widest block">Background Playlist (Direct .mp3 Links)</label>
+                    <button onClick={addSongUrl} className="text-[10px] bg-pink-100 text-pink-500 px-3 py-1 rounded-full hover:bg-pink-200 uppercase font-black tracking-widest">+ Add Song</button>
+                  </div>
+                  <div className="space-y-3">
+                    {(localConfig.backgroundMusicUrls || []).map((url, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input 
+                          className="flex-1 bg-white border border-pink-100 p-3 rounded-xl text-xs italic" 
+                          placeholder="https://example.com/song.mp3"
+                          value={url} 
+                          onChange={(e) => updateSongUrl(idx, e.target.value)}
+                        />
+                        <button onClick={() => removeSongUrl(idx)} className="text-red-300 hover:text-red-500 p-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    ))}
+                    {(localConfig.backgroundMusicUrls || []).length === 0 && (
+                      <p className="text-xs text-pink-300 italic">No songs added. Click "Add Song" to start your playlist.</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="text-[10px] text-pink-400 uppercase tracking-widest block mb-2">Midnight Celebration Sound Effect</label>

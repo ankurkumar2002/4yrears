@@ -42,7 +42,7 @@ export interface SiteConfig {
   pauseMessage?: string;
   partnerPrompt?: string; 
   partnerStaticMessage?: string; 
-  backgroundMusicUrl?: string;
+  backgroundMusicUrls?: string[]; // Updated to support multiple songs
   celebrationSfxUrl?: string;
   mcqs: MCQ[];
   media: MediaAsset[];

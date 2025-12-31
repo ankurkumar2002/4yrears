@@ -21,8 +21,11 @@ export const INITIAL_CONFIG: SiteConfig = {
   partnerStaticMessage: "As we screenshare and look back at these memories together, let's remember that the best chapters are yet to be written. Here's to us, to four years of growth, and to a lifetime of love.",
   cloudinaryCloudName: 'drtxmi9jm', 
   cloudinaryUploadPreset: 'ml_default',
-  // Dreamy, ambient track for the atmosphere
-  backgroundMusicUrl: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3',
+  // Direct MP3 links (ensure these are direct file URLs)
+  backgroundMusicUrls: [
+    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'
+  ],
   celebrationSfxUrl: 'https://assets.mixkit.co/sfx/preview/mixkit-party-popper-celebration-02-2248.mp3',
   mcqs: [
     {

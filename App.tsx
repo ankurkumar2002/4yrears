@@ -14,12 +14,11 @@ const VideoPlayer: React.FC<{ src: string, className?: string, autoPlay?: boolea
   return (
     <video 
       src={src} 
-      className={`${className} shadow-inner bg-black`} 
+      className={`${className} shadow-inner bg-black rounded-lg`} 
       controls 
       playsInline 
       preload="auto"
       autoPlay={autoPlay}
-      // Audio is enabled. Native controls will allow user to adjust volume.
       muted={false} 
     />
   );
@@ -37,9 +36,10 @@ const App: React.FC = () => {
   const [celebrationActive, setCelebrationActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   
-  // Audio refs
+  // Audio refs and states
   const bgMusicRef = useRef<HTMLAudioElement>(null);
   const celebrationSfxRef = useRef<HTMLAudioElement>(null);
+  const [currentSongIndex, setCurrentSongIndex] = useState(0);
 
   // MCQ state
   const [currentMcqIdx, setCurrentMcqIdx] = useState(0);
@@ -77,6 +77,13 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [config.celebrationDate, phase]);
 
+  // Ensure song index is valid when playlist changes
+  useEffect(() => {
+    if (currentSongIndex >= (config.backgroundMusicUrls?.length || 0)) {
+      setCurrentSongIndex(0);
+    }
+  }, [config.backgroundMusicUrls]);
+
   const handleTriggerCelebration = () => {
     setCelebrationActive(true);
     if (celebrationSfxRef.current && config.celebrationSfxUrl) {
@@ -86,9 +93,23 @@ const App: React.FC = () => {
   };
 
   const startAtmosphere = () => {
-    if (bgMusicRef.current && config.backgroundMusicUrl) {
+    if (bgMusicRef.current && config.backgroundMusicUrls && config.backgroundMusicUrls.length > 0) {
       bgMusicRef.current.volume = isMuted ? 0 : 0.4;
       bgMusicRef.current.play().catch(e => console.debug("Music blocked until further interaction", e));
+    }
+  };
+
+  const handleSongEnded = () => {
+    const urls = config.backgroundMusicUrls || [];
+    if (urls.length > 1) {
+      const nextIdx = (currentSongIndex + 1) % urls.length;
+      setCurrentSongIndex(nextIdx);
+      // Wait for React to update src, then play
+      setTimeout(() => {
+        if (bgMusicRef.current) {
+          bgMusicRef.current.play().catch(e => console.debug("Next song autoplay blocked", e));
+        }
+      }, 100);
     }
   };
 
@@ -146,7 +167,11 @@ const App: React.FC = () => {
       <Confetti active={isShowerActive} />
       
       {/* Global Audio Elements */}
-      <audio ref={bgMusicRef} src={config.backgroundMusicUrl} loop />
+      <audio 
+        ref={bgMusicRef} 
+        src={config.backgroundMusicUrls?.[currentSongIndex] || ''} 
+        onEnded={handleSongEnded}
+      />
       <audio ref={celebrationSfxRef} src={config.celebrationSfxUrl} />
 
       {/* Admin Toggle */}
@@ -208,7 +233,7 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="flex justify-center order-1 md:order-2">
-                      <Frame className="w-full max-w-sm md:max-w-md">
+                      <Frame className="w-full max-sm md:max-w-md">
                         {getMediaFor('animation', config.moments[currentMomentIdx].id)[0] ? (
                           getMediaFor('animation', config.moments[currentMomentIdx].id)[0].resourceType === 'image' ? (
                             <img src={getMediaFor('animation', config.moments[currentMomentIdx].id)[0].url} className="w-full aspect-[4/5] object-cover" alt="Memory" />
@@ -426,13 +451,17 @@ const App: React.FC = () => {
            </button>
            <div className="max-w-5xl w-full h-full flex flex-col items-center justify-center gap-6">
              <div className="relative w-full flex-1 flex items-center justify-center">
-                <Frame className="w-full max-h-[75vh] flex items-center justify-center overflow-hidden">
+                <div className="w-full max-h-[75vh] flex items-center justify-center overflow-hidden">
                   {selectedGalleryMedia.resourceType === 'image' ? (
-                    <img src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] object-contain" alt="Selected memory" />
+                    <Frame className="w-full h-full flex items-center justify-center">
+                      <img src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] object-contain" alt="Selected memory" />
+                    </Frame>
                   ) : (
-                    <VideoPlayer key={selectedGalleryMedia.id} src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh]" autoPlay />
+                    <div className="relative p-2 bg-white border-2 border-pink-100 rounded-2xl shadow-2xl w-full max-w-4xl">
+                      <VideoPlayer key={selectedGalleryMedia.id} src={selectedGalleryMedia.url} className="w-full max-h-[70vh]" autoPlay />
+                    </div>
                   )}
-                </Frame>
+                </div>
              </div>
              {selectedGalleryMedia.quote && (
                <p className="text-xl md:text-3xl serif italic text-[#5D4037] text-center max-w-3xl px-6 py-4 animate-in slide-in-from-bottom duration-500 bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm">
