@@ -4,7 +4,7 @@ const { MongoClient } = require('mongodb');
  * MongoDB Atlas Connection String provided by user.
  * Database name 'anniversary' is used for the collection store.
  */
-const MONGODB_URI = "mongodb+srv://app_admin:ankur@cluster0.3nmgy2b.mongodb.net/anniversary?retryWrites=true&w=majority&appName=Cluster0";
+const MONGODB_URI = process.env.MONGODB_URI;
 
 let cachedClient = null;
 
