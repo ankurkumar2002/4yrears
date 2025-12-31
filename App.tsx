@@ -36,6 +36,7 @@ const App: React.FC = () => {
   const [celebrationActive, setCelebrationActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.4);
+  const [isVolumeHovered, setIsVolumeHovered] = useState(false);
   
   // Audio refs and states
   const bgMusicRef = useRef<HTMLAudioElement>(null);
@@ -84,7 +85,8 @@ const App: React.FC = () => {
     const now = new Date().getTime();
     if (now >= target && phase !== AppPhase.COUNTDOWN) {
       setCelebrationActive(true);
-      startAtmosphere();
+      // Wait for user interaction or slight delay
+      setTimeout(() => startAtmosphere(true), 1000);
     }
   }, []);
 
@@ -112,19 +114,24 @@ const App: React.FC = () => {
     if (phase === AppPhase.COUNTDOWN) {
       setPhase(AppPhase.CELEBRATION);
     }
-    // Start music playlist automatically at midnight
-    startAtmosphere();
+    // Start music playlist automatically at midnight or when button clicked
+    startAtmosphere(true);
   };
 
-  const startAtmosphere = () => {
-    // guidline check: only play if past countdown
-    const target = new Date(config.celebrationDate).getTime();
-    const now = new Date().getTime();
-    if (now < target) return; 
+  const startAtmosphere = (force = false) => {
+    // If we've already activated celebration, we don't need to re-check the clock
+    // Browsers require a user gesture (like the 'Relive Us' button click) to play audio
+    if (!celebrationActive && !force) return;
 
     if (bgMusicRef.current && config.backgroundMusicUrls && config.backgroundMusicUrls.length > 0) {
       bgMusicRef.current.volume = isMuted ? 0 : volume;
-      bgMusicRef.current.play().catch(e => console.debug("Music blocked until further interaction", e));
+      const playPromise = bgMusicRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => {
+          console.error("Audio Playback Error:", e);
+          // If it fails, we keep trying on next user interaction
+        });
+      }
     }
   };
 
@@ -138,12 +145,12 @@ const App: React.FC = () => {
         if (bgMusicRef.current) {
           bgMusicRef.current.play().catch(e => console.debug("Next song autoplay blocked", e));
         }
-      }, 100);
+      }, 200);
     } else if (urls.length === 1) {
       // Loop the single song
       if (bgMusicRef.current) {
         bgMusicRef.current.currentTime = 0;
-        bgMusicRef.current.play();
+        bgMusicRef.current.play().catch(e => console.debug("Loop blocked", e));
       }
     }
   };
@@ -189,6 +196,7 @@ const App: React.FC = () => {
     const phases = Object.values(AppPhase);
     const currIdx = phases.indexOf(phase);
     if (currIdx > 0) setPhase(phases[currIdx - 1]);
+    startAtmosphere();
   };
 
   const isShowerActive = celebrationActive && [AppPhase.COUNTDOWN, AppPhase.CELEBRATION, AppPhase.MOMENTS].includes(phase);
@@ -203,20 +211,25 @@ const App: React.FC = () => {
         ref={bgMusicRef} 
         src={config.backgroundMusicUrls?.[currentSongIndex] || ''} 
         onEnded={handleSongEnded}
+        preload="auto"
       />
-      <audio ref={celebrationSfxRef} src={config.celebrationSfxUrl} />
+      <audio ref={celebrationSfxRef} src={config.celebrationSfxUrl} preload="auto" />
 
       {/* Admin Toggle */}
       <button onClick={() => setShowAdmin(true)} className="fixed bottom-24 right-6 z-[60] w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
       </button>
 
-      {/* Floating Controls Area (Only if past countdown) */}
+      {/* Volume Controls (Only if celebration has started) */}
       {celebrationActive && (
-        <div className="fixed bottom-36 right-6 z-[60] flex flex-col items-center gap-4">
-           {/* Volume Slider - Vertical style when hovered or always on mobile? Let's go simple horizontal tooltip-like */}
-           <div className="group relative flex flex-col items-center">
-             <div className="absolute bottom-full mb-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-pink-100 shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 pointer-events-none group-hover:pointer-events-auto">
+        <div 
+          className="fixed bottom-36 right-6 z-[60] flex flex-col items-center"
+          onMouseEnter={() => setIsVolumeHovered(true)}
+          onMouseLeave={() => setIsVolumeHovered(false)}
+        >
+           {/* Volume Slider - Fixed the 'disappearing' hover issue with a transparent padding bridge */}
+           <div className={`transition-all duration-300 transform ${isVolumeHovered ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'} flex flex-col items-center`}>
+             <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-pink-100 shadow-xl flex flex-col items-center mb-2">
                <input 
                  type="range" 
                  min="0" 
@@ -226,16 +239,21 @@ const App: React.FC = () => {
                  onChange={(e) => setVolume(parseFloat(e.target.value))}
                  className="w-32 h-1 bg-pink-100 rounded-lg appearance-none cursor-pointer accent-pink-500"
                />
-               <p className="text-[8px] uppercase tracking-widest text-pink-300 font-bold mt-2 text-center">Volume</p>
+               <p className="text-[8px] uppercase tracking-widest text-pink-300 font-bold mt-2 text-center">
+                 Song {currentSongIndex + 1} of {config.backgroundMusicUrls?.length || 0}
+               </p>
              </div>
-             <button onClick={toggleMute} className="w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
-                {isMuted || volume === 0 ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                )}
-             </button>
+             {/* Transparent bridge to prevent hover loss when moving mouse between slider and button */}
+             <div className="h-2 w-full" />
            </div>
+           
+           <button onClick={toggleMute} className="w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
+              {isMuted || volume === 0 ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+              )}
+           </button>
         </div>
       )}
 
@@ -254,7 +272,7 @@ const App: React.FC = () => {
                 ))}
               </div>
               <button 
-                onClick={() => { handleTriggerCelebration(); startAtmosphere(); }} 
+                onClick={handleTriggerCelebration} 
                 className="mt-16 px-10 py-3 bg-white border border-pink-100 text-pink-300 rounded-full text-[9px] uppercase tracking-widest font-black shadow-sm"
               >
                 Relive Us
@@ -559,6 +577,24 @@ const App: React.FC = () => {
         .animate-in { animation: var(--tw-duration, 500ms) ease-out both; }
         .fade-in { animation-name: fade-in; }
         .slide-in-from-bottom { animation-name: slide-in-from-bottom; }
+        
+        /* Range Slider Stylings */
+        input[type=range]::-webkit-slider-thumb {
+          appearance: none;
+          height: 12px;
+          width: 12px;
+          border-radius: 50%;
+          background: #FF69B4;
+          cursor: pointer;
+          margin-top: -4px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+          width: 100%;
+          height: 4px;
+          cursor: pointer;
+          background: #FFE4E1;
+          border-radius: 2px;
+        }
       `}</style>
     </div>
   );
