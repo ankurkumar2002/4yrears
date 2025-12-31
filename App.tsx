@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppPhase, SiteConfig, MediaAsset } from './types';
 import { INITIAL_CONFIG } from './constants';
 import AdminPanel from './components/AdminPanel';
@@ -27,6 +27,9 @@ const App: React.FC = () => {
 
   // Photo Session state
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
+
+  // Gallery view state
+  const [selectedGalleryMedia, setSelectedGalleryMedia] = useState<MediaAsset | null>(null);
 
   useEffect(() => {
     const target = new Date(config.celebrationDate).getTime();
@@ -89,13 +92,33 @@ const App: React.FC = () => {
 
   const isShowerActive = celebrationActive && [AppPhase.COUNTDOWN, AppPhase.CELEBRATION, AppPhase.MOMENTS].includes(phase);
 
+  // Helper to render video with proper attributes
+  const VideoPlayer = ({ src, className }: { src: string, className?: string }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    return (
+      <video 
+        ref={videoRef}
+        src={src} 
+        className={className} 
+        controls 
+        playsInline 
+        preload="auto"
+        onClick={(e) => {
+          const v = e.currentTarget;
+          v.paused ? v.play() : v.pause();
+        }}
+      />
+    );
+  };
+
   return (
     <div className="relative h-screen w-screen bg-[#FFF9F9] overflow-hidden flex flex-col text-[#5D4037]">
       <div className="absolute inset-0 bg-floral pointer-events-none opacity-20" />
       <Confetti active={isShowerActive} />
 
-      <button onClick={() => setShowAdmin(true)} className="fixed bottom-6 right-6 z-[60] w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 m-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+      {/* Admin Toggle */}
+      <button onClick={() => setShowAdmin(true)} className="fixed bottom-6 right-6 z-[60] w-10 h-10 rounded-full bg-white/40 backdrop-blur border border-pink-100 text-pink-200 hover:text-pink-400 transition-all shadow-sm flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
       </button>
 
       <main className="flex-1 relative z-10 overflow-hidden">
@@ -143,7 +166,7 @@ const App: React.FC = () => {
                           getMediaFor('animation', config.moments[currentMomentIdx].id)[0].resourceType === 'image' ? (
                             <img src={getMediaFor('animation', config.moments[currentMomentIdx].id)[0].url} className="w-full aspect-[4/5] object-cover" alt="Memory" />
                           ) : (
-                            <video src={getMediaFor('animation', config.moments[currentMomentIdx].id)[0].url} controls className="w-full aspect-[4/5] object-cover" />
+                            <VideoPlayer src={getMediaFor('animation', config.moments[currentMomentIdx].id)[0].url} className="w-full aspect-[4/5] object-cover" />
                           )
                         ) : (
                           <div className="w-full aspect-[4/5] bg-pink-50/20 flex items-center justify-center text-pink-200 serif italic text-lg text-center p-4">A Moment Captured</div>
@@ -196,7 +219,7 @@ const App: React.FC = () => {
                        {getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx]?.resourceType === 'image' ? (
                          <img src={getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx].url} className="w-full max-h-[55vh] object-contain" alt="MCQ Result" />
                        ) : (
-                         <video src={getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx]?.url} controls autoPlay playsInline className="w-full max-h-[55vh] bg-black" />
+                         <VideoPlayer src={getMediaFor('mcq', config.mcqs[currentMcqIdx].id)[currentSceneIdx]?.url} className="w-full max-h-[55vh] bg-black" />
                        )}
                     </Frame>
                     <div className="flex gap-6">
@@ -242,7 +265,7 @@ const App: React.FC = () => {
                        {getSessionMedia()[currentSlideIdx].resourceType === 'image' ? (
                          <img src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh] object-contain" alt="Slide" />
                        ) : (
-                         <video src={getSessionMedia()[currentSlideIdx].url} controls playsInline className="w-full max-h-[60vh] bg-black" />
+                         <VideoPlayer src={getSessionMedia()[currentSlideIdx].url} className="w-full max-h-[60vh] bg-black" />
                        )}
                      </Frame>
                      {getSessionMedia()[currentSlideIdx].quote && (
@@ -278,7 +301,6 @@ const App: React.FC = () => {
                 {config.partnerPrompt || "A Promise for the Future"}
               </h2>
               <div className="relative py-12 px-8">
-                {/* Decorative brackets */}
                 <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-pink-100 rounded-tl-3xl opacity-50" />
                 <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-pink-100 rounded-br-3xl opacity-50" />
                 
@@ -290,7 +312,7 @@ const App: React.FC = () => {
                 <div className="text-pink-100 text-3xl opacity-40">♥</div>
                 <button 
                   onClick={nextPhase} 
-                  className="px-16 py-4 bg-pink-500 text-white rounded-full shadow-lg font-bold text-xs uppercase tracking-widest hover:bg-pink-600 transition-all hover:scale-105 active:scale-95"
+                  className="px-16 py-4 bg-pink-500 text-white rounded-full shadow-lg font-bold text-xs uppercase tracking-widest hover:bg-pink-600 transition-all"
                 >
                   Final Reflections
                 </button>
@@ -309,17 +331,94 @@ const App: React.FC = () => {
             </div>
           )}
 
+          {/* Full-Screen Gallery Phase */}
+          {phase === AppPhase.GALLERY && (
+            <div className="w-full h-full max-w-6xl mx-auto flex flex-col p-6 animate-in slide-in-from-bottom duration-700">
+               <div className="flex justify-between items-end mb-10 border-b border-pink-100 pb-6">
+                 <div>
+                   <span className="text-[10px] uppercase tracking-[0.5em] text-pink-300 font-bold">The Archive</span>
+                   <h2 className="text-5xl serif italic text-pink-600">Our Shared Media</h2>
+                 </div>
+                 <button onClick={() => setPhase(AppPhase.CELEBRATION)} className="text-[10px] uppercase tracking-widest font-black text-pink-400 border border-pink-100 px-6 py-2 rounded-full">Close Archive</button>
+               </div>
+               
+               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-20 overflow-y-auto pr-2 custom-scrollbar">
+                 {config.media.map((m) => (
+                   <div 
+                    key={m.id} 
+                    onClick={() => setSelectedGalleryMedia(m)}
+                    className="aspect-square bg-white border border-pink-100 rounded-xl overflow-hidden cursor-zoom-in group shadow-sm hover:shadow-md transition-all"
+                   >
+                     {m.resourceType === 'image' ? (
+                       <img src={m.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Memory" />
+                     ) : (
+                       <div className="w-full h-full bg-black relative flex items-center justify-center">
+                         <div className="text-white text-[10px] font-black uppercase tracking-widest z-10">Video</div>
+                         <VideoPlayer src={m.url} className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                       </div>
+                     )}
+                   </div>
+                 ))}
+               </div>
+            </div>
+          )}
+
         </div>
       </main>
 
-      {phase !== AppPhase.COUNTDOWN && phase !== AppPhase.CELEBRATION && (
-        <div className="h-12 flex justify-between px-8 items-center z-40 bg-white/5 border-t border-pink-50/10">
-           <button onClick={prevPhase} className="text-[8px] font-bold uppercase tracking-widest text-pink-200 hover:text-pink-400 transition-all">Previous</button>
-           <button onClick={nextPhase} className="text-[8px] font-bold uppercase tracking-widest text-pink-200 hover:text-pink-400 transition-all">Next</button>
+      {/* Media Lightbox/Modal */}
+      {selectedGalleryMedia && (
+        <div className="fixed inset-0 z-[100] bg-[#FFF9F9]/95 flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+           <button onClick={() => setSelectedGalleryMedia(null)} className="absolute top-8 right-8 text-pink-300 hover:text-pink-500 transition-all">
+             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+           </button>
+           <Frame className="max-w-4xl w-full max-h-[80vh] flex items-center justify-center">
+             {selectedGalleryMedia.resourceType === 'image' ? (
+               <img src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] object-contain" alt="Selected memory" />
+             ) : (
+               <VideoPlayer src={selectedGalleryMedia.url} className="max-w-full max-h-[70vh] bg-black" />
+             )}
+           </Frame>
+           {selectedGalleryMedia.quote && (
+             <p className="mt-8 text-2xl serif italic text-[#5D4037] text-center max-w-2xl px-4 animate-in slide-in-from-bottom duration-500">
+               "{selectedGalleryMedia.quote}"
+             </p>
+           )}
         </div>
       )}
 
+      {/* Enhanced Bottom Navigation & Gallery Link */}
+      <div className="h-14 flex justify-between px-10 items-center z-40 bg-white/40 backdrop-blur-sm border-t border-pink-100">
+        <div className="flex gap-8">
+           {phase !== AppPhase.COUNTDOWN && phase !== AppPhase.CELEBRATION && (
+             <button onClick={prevPhase} className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300 hover:text-pink-500 transition-all">Previous</button>
+           )}
+        </div>
+        
+        {/* THE REQUESTED GALLERY LINK */}
+        <button 
+          onClick={() => setPhase(AppPhase.GALLERY)}
+          className="group flex flex-col items-center gap-1 -mt-2 transition-all hover:scale-110"
+        >
+          <div className="text-pink-200 text-lg transition-colors group-hover:text-pink-400">❀</div>
+          <span className="text-[9px] font-black uppercase tracking-[0.4em] text-pink-300 group-hover:text-pink-500">The Archive</span>
+        </button>
+
+        <div className="flex gap-8">
+           {phase !== AppPhase.COUNTDOWN && phase !== AppPhase.CELEBRATION && phase !== AppPhase.GALLERY && (
+             <button onClick={nextPhase} className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300 hover:text-pink-500 transition-all">Next</button>
+           )}
+        </div>
+      </div>
+
       {showAdmin && <AdminPanel config={config} onSave={handleAdminSave} onClose={() => setShowAdmin(false)} />}
+      
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #FFD1DC; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #FF69B4; }
+      `}</style>
     </div>
   );
 };

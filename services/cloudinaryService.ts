@@ -7,8 +7,6 @@
 export const cloudinaryService = {
   /**
    * Opens the Cloudinary Upload Widget for browser-side uploads.
-   * Note: For security, the secret is never stored or used on the client side.
-   * Direct browser uploads usually use 'Unsigned Upload Presets' configured in the Cloudinary Console.
    */
   openWidget(cloudName: string, uploadPreset: string, callback: (result: any) => void) {
     if (!(window as any).cloudinary) {
@@ -23,7 +21,8 @@ export const cloudinaryService = {
         sources: ['local', 'url', 'camera'],
         multiple: true,
         clientAllowedFormats: ['png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'webm'],
-        maxVideoFileSize: 100000000, // 100MB limit
+        maxVideoFileSize: 1000000000, // Increased to 1GB (1,000,000,000 bytes)
+        resourceType: 'auto', // Important for handling videos correctly
         styles: {
           palette: {
             window: '#FFFFFF',
@@ -47,7 +46,6 @@ export const cloudinaryService = {
       },
       (error: any, result: any) => {
         if (!error && result && result.event === "success") {
-          // info contains resource_type: 'image' or 'video'
           callback(result.info);
         } else if (error) {
           console.error("Cloudinary Widget Error:", error);

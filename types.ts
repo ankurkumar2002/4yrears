@@ -7,7 +7,8 @@ export enum AppPhase {
   PAUSE = 'PAUSE',
   PHOTOSESSION = 'PHOTOSESSION',
   PARTNER_SHARE = 'PARTNER_SHARE',
-  CLOSING = 'CLOSING'
+  CLOSING = 'CLOSING',
+  GALLERY = 'GALLERY'
 }
 
 export interface MediaAsset {
@@ -39,8 +40,8 @@ export interface SiteConfig {
   celebrationDate: string;
   closingMessage?: string;
   pauseMessage?: string;
-  partnerPrompt?: string; // Heading for the share section
-  partnerStaticMessage?: string; // Static content for the share section
+  partnerPrompt?: string; 
+  partnerStaticMessage?: string; 
   mcqs: MCQ[];
   media: MediaAsset[];
   moments: MomentData[];
